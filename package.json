@@ -16,6 +16,6 @@
   "type": "module",
   "module": "./src/sync.js",
   "engines": {
-    "node": ">=22.22.0"
+    "node": ">=14.0.0"
   }
 }
