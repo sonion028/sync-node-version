@@ -1,0 +1,21 @@
+{
+  "name": "sync-node-version",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Sync the devEngines.runtime or engines.node version to .node-version",
+  "keywords": [
+    "sync",
+    "node-version",
+    "sync-node-version"
+  ],
+  "bugs": "https://github.com/sonion028/sync-node-version/issues",
+  "license": "MIT",
+  "author": "sonion",
+  "repository": "https://github.com/sonion028/sync-node-version",
+  "bin": "./scripts/sync-node-version/index.js",
+  "type": "module",
+  "module": "./src/index.js",
+  "engines": {
+    "node": ">=22.22.0"
+  }
+}
