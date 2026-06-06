@@ -12,9 +12,9 @@
   "license": "MIT",
   "author": "sonion",
   "repository": "https://github.com/sonion028/sync-node-version",
-  "bin": "./scripts/sync-node-version/index.js",
+  "bin": "./src/index.js",
   "type": "module",
-  "module": "./src/index.js",
+  "module": "./src/sync.js",
   "engines": {
     "node": ">=22.22.0"
   }
