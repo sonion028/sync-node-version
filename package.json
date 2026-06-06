@@ -1,6 +1,6 @@
 {
   "name": "sync-node-version",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": false,
   "description": "Sync the devEngines.runtime or engines.node version to .node-version",
   "keywords": [
