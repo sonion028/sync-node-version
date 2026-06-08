@@ -8,6 +8,9 @@
     "node-version",
     "sync-node-version"
   ],
+  "scripts": {
+    "test": "node test/sync.test.js"
+  },
   "bugs": "https://github.com/sonion028/sync-node-version/issues",
   "license": "MIT",
   "author": "sonion",
@@ -16,6 +19,6 @@
   "type": "module",
   "module": "./src/sync.js",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=14.13.1"
   }
 }

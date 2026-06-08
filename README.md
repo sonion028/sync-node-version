@@ -13,7 +13,18 @@
 1. `devEngines.runtime.version`
 2. `engines.node`
 
-如果版本范围中包含多个版本，会提取并写入其中最大的版本号。
+支持的版本写法包括：
+
+- `20`
+- `20.19`
+- `20.19.0`
+- `>=20.19.0`
+- `^20.19.0`
+- `~20.19.0`
+- `=20.19.0`
+- `^20.19.0 || >=22.12.0`
+
+默认情况下，如果版本范围中包含多个版本，会提取并写入其中最大的纯数字版本号。
 
 ## 安装
 
@@ -39,6 +50,8 @@ sync-node-version
 
 执行后会根据当前项目的 `package.json` 生成或更新 `.node-version`。
 
+默认写入纯数字版本。
+
 例如：
 
 ```json
@@ -55,6 +68,46 @@ sync-node-version
 
 ```txt
 20.0.0
+```
+
+如果配置了多个版本范围，例如：
+
+```json
+{
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}
+```
+
+默认会写入其中最大的纯数字版本号：
+
+```txt
+22.12.0
+```
+
+如果希望保留完整版本范围，可以执行：
+
+```bash
+sync-node-version --version-range
+```
+
+等价于：
+
+```bash
+sync-node-version --version-range=true
+```
+
+此时会写入经过验证和格式化后的版本范围：
+
+```txt
+^20.19.0 || >=22.12.0
+```
+
+也可以显式关闭范围写入：
+
+```bash
+sync-node-version --version-range=false
 ```
 
 如果没有配置 `devEngines.runtime.version`，则会使用 `engines.node`：

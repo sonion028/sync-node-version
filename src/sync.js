@@ -1,60 +1,102 @@
-/* global process */
 import fs from "node:fs";
 import path from "node:path";
 
-// 比较版本号，返回最大的
-const compareVersions = (a, b) => {
-  const partsA = a.split(".").map(Number);
-  const partsB = b.split(".").map(Number);
-  const len = Math.min(partsA.length, partsB.length);
-  for (let i = 0; i < len; i++) {
+// /(?<![0-9.])[>=<~^]*([0-9]+(?:\.[0-9]+){0,2})(?=[\s|]|$|\.(?!\.))/g;
+/** 版本段正则表达式 */
+const VERSION_SEGMENT_PATTERN =
+  /^(>=|\^|~|=)?((?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*)){0,2})$/;
+
+/** 读取package.json文件 */
+export const readPackageJson = (projectPath) => {
+  const packageJsonPath = path.join(projectPath, "package.json");
+  return JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+};
+
+/** 从 package.json 中获取配置的 node 版本 */
+const getConfiguredNodeVersion = (packageJson) => {
+  const {
+    engines: { node: runtimeVersion } = {},
+    devEngines: { runtime: { version: devVersion } = {} } = {},
+  } = packageJson ?? {};
+  return devVersion ?? runtimeVersion;
+};
+
+/**
+ * @author: sonion
+ * @description: 将版本号字符串转换为可比较的数组
+ * @param {string} version 版本号字符串，例如 "16.0.0"
+ * @return {Array} 可比较的数组：[16, 0, 0]
+ */
+const toComparableParts = (version) => {
+  const parts = version.split(".").map(Number);
+  return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0];
+};
+
+/** 比较版本号，返回最大的 */
+export const compareVersions = (a, b) => {
+  const partsA = toComparableParts(a);
+  const partsB = toComparableParts(b);
+  // 强制3段式
+  for (let i = 0; i < 3; i++) {
     if (partsA[i] > partsB[i]) return 1;
     if (partsA[i] < partsB[i]) return -1;
   }
   return 0;
 };
 
-// 读取 package.json
-export const syncNodeVersion = (projectPath) => {
-  const packageJsonPath = path.join(projectPath, "package.json");
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+/**
+ * @author: sonion
+ * @description: 将版本段字符串解析为结构化的版本段对象
+ * @param {string} segment 版本段字符串，例如 ">=16"
+ * @return {Object} 版本段对象：{operator: ">=", version: "16"}
+ */
+const parseVersionSegment = (segment) => {
+  const trimmedSegment = segment.trim();
+  const match = VERSION_SEGMENT_PATTERN.exec(trimmedSegment);
+  if (!match) {
+    throw new Error(`Invalid node version segment: ${segment}`);
+  }
+  const [, operator = "", version] = match;
+  return {
+    operator,
+    version,
+  };
+};
 
-  // 提取 node 版本
-  const {
-    engines: { node: runtimeVersion } = {},
-    devEngines: { runtime: { version: devVersion } = {} } = {},
-  } = packageJson ?? {};
-  const nodeVersion = devVersion ?? runtimeVersion;
+/** 将版本范围字符串解析为结构化的版本段数组 */
+const parseVersionRange = (rawVersion) => {
+  if (typeof rawVersion !== "string" || !rawVersion.trim()) {
+    throw new Error(`Invalid node version: ${rawVersion}`);
+  }
+  return rawVersion.split("||").map(parseVersionSegment);
+};
+
+/** 根据参数返回版本范围还是精确版本 */
+export const resolveNodeVersion = (rawVersion, options = {}) => {
+  const { versionRange = false } = options;
+  const segments = parseVersionRange(rawVersion);
+  if (versionRange) {
+    return segments
+      .map(({ operator, version }) => `${operator}${version}`)
+      .join(" || ");
+  }
+  return segments.reduce((max, current) =>
+    compareVersions(current.version, max.version) > 0 ? current : max,
+  ).version;
+};
+
+/** 同步 node 版本 */
+export const syncNodeVersion = (projectPath, options = {}) => {
+  const packageJson = readPackageJson(projectPath);
+  const nodeVersion = getConfiguredNodeVersion(packageJson);
 
   if (!nodeVersion) {
-    console.error("Error: No node version found in package.json engines");
-    process.exit(1);
+    throw new Error(
+      "No node version found in package.json devEngines.runtime.version or engines.node",
+    );
   }
 
-  // const versionPattern = /[>=<~^]*([0-9]+\.[0-9]+\.[0-9]+)/g; // 严格3段式
-
-  // 提取所有版本号（支持 >=、^、~、= 等前缀，以及 || 分隔）
-  // "^18.18. || >=21..0 || ~20.||=25.16.0||22.0.9"
-  // 支持 不足 3 位版本号、超过 3 段版本号会被丢弃。版本号错误会丢弃
-  const versionPattern =
-    /(?<![0-9.])[>=<~^]*([0-9]+(?:\.[0-9]+){0,2})(?=[\s|]|$|\.(?!\.))/g;
-  const versions = [];
-  let match;
-
-  // 提取所有版本号
-  while ((match = versionPattern.exec(nodeVersion))) {
-    versions.push(match[1]);
-  }
-
-  if (!versions.length) {
-    console.error("Error: Could not parse node version:", nodeVersion);
-    process.exit(1);
-  }
-
-  // 获取最大版本号
-  const validVersion = versions.reduce((max, v) =>
-    compareVersions(v, max) > 0 ? v : max,
-  );
+  const validVersion = resolveNodeVersion(nodeVersion, options);
 
   // 写入 .node-version 文件
   const nodeVersionPath = path.join(projectPath, ".node-version");
