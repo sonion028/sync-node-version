@@ -49,8 +49,7 @@ jobs:
       - name: 安装 Node.js
         uses: actions/setup-node@v4
         with:
-          # node-version-file: ">=22.0.0"
-          # node-version: 24.13.0 # 建议用 LTS 版本，稳定性更好
+          node-version: ">=22.0.0"
           registry-url: "https://registry.npmjs.org/"
 
       # tag 同步 package.json 版本 依赖jq
