@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*" # 例如 v1.2.3
+
+# Trusted Publisher 权限
+permissions:
+  id-token: write # Required for OIDC
+  contents: write # Required for Release
+
+jobs:
+  build-and-publish:
+    if: github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest # 使用最新的 Ubuntu Runner
+    # environment: production-publish-npm # 指定环境名
+
+    steps:
+      # 推送 tag  github.event.base_ref不稳定，可能没有值
+      - name: 验证 Tag 在 main 分支上
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor ${{ github.sha }} origin/main; then
+            echo "错误：Tag ${{ github.ref_name }} 不在 main 分支上"
+            exit 1
+          fi
+          echo "Tag 在 main 分支上 ✅"
+
+      # tag 同步 package.json 版本 依赖jq
+      - name: 同步 Tag 为 package.json 版本
+        run: |
+          set -e
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          echo "当前 Tag: $TAG，提取版本号: $VERSION"
+          if [ -z "$VERSION" ]; then
+            echo "错误：版本号为空，请检查 Tag 格式（应为 vX.Y.Z）"
+            exit 1
+          fi
+          jq ".version = \"$VERSION\"" package.json > package.json.tmp
+          mv package.json.tmp package.json
+          echo "更新后 package.json 版本: $(cat package.json | grep version)"
+
+      # 打印将要发布的文件列表，避免误发布
+      - name: 打印发布文件列表
+        run: pnpm pack --dry-run
+
+      # 发布到 npm registry - 只在标签触发时执行
+      - name: Publish 到 npm
+        run: |
+          echo "开始发布到 npm..."
+          pnpm publish --access public --no-git-checks
+          echo "发布成功 ✅"
+        # env:
+        #   NODE_AUTH_TOKEN: ${{ secrets.PUBLISH_TOKEN }} # 首次发布需要
+
+      # 只有发布成功后才生成 GitHub Release
+      - name: 创建 GitHub Release 记录
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body: |
+            🎉 Auto-generated Release
+            - Release Version: ${{ github.ref_name }}
+            - Commit SHA: ${{ github.sha }}
+          draft: false
+          prerelease: false
