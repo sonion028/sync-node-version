@@ -17,6 +17,13 @@ jobs:
     # environment: production-publish-npm # 指定环境名
 
     steps:
+      # 使用本地 composite action 前需要先 checkout 代码
+      # 否则，GitHub Actions 无法找到本地的 action.yaml 文件
+      - name: Checkout
+        uses: actions/checkout@v4 # 拉取触发工作流的 tag 对应 commit
+        with:
+          fetch-depth: 0 # 拉取完整历史。当仓库历史多时可能变慢，可考虑用 GitHub API compare 优化
+
       # 推送 tag  github.event.base_ref不稳定，可能没有值
       - name: 验证 Tag 在 main 分支上
         run: |
