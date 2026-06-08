@@ -1,11 +1,23 @@
 /* global process */
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
+
+// 比较版本号，返回最大的
+const compareVersions = (a, b) => {
+  const partsA = a.split(".").map(Number);
+  const partsB = b.split(".").map(Number);
+  const len = Math.min(partsA.length, partsB.length);
+  for (let i = 0; i < len; i++) {
+    if (partsA[i] > partsB[i]) return 1;
+    if (partsA[i] < partsB[i]) return -1;
+  }
+  return 0;
+};
 
 // 读取 package.json
 export const syncNodeVersion = (projectPath) => {
-  const packageJsonPath = path.join(projectPath, 'package.json');
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const packageJsonPath = path.join(projectPath, "package.json");
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 
   // 提取 node 版本
   const {
@@ -15,7 +27,7 @@ export const syncNodeVersion = (projectPath) => {
   const nodeVersion = devVersion ?? runtimeVersion;
 
   if (!nodeVersion) {
-    console.error('Error: No node version found in package.json engines');
+    console.error("Error: No node version found in package.json engines");
     process.exit(1);
   }
 
@@ -35,29 +47,17 @@ export const syncNodeVersion = (projectPath) => {
   }
 
   if (!versions.length) {
-    console.error('Error: Could not parse node version:', nodeVersion);
+    console.error("Error: Could not parse node version:", nodeVersion);
     process.exit(1);
   }
 
-  // 比较版本号，返回最大的
-  const compareVersions = (a, b) => {
-    const partsA = a.split('.').map(Number);
-    const partsB = b.split('.').map(Number);
-    const len = Math.min(partsA.length, partsB.length);
-    for (let i = 0; i < len; i++) {
-      if (partsA[i] > partsB[i]) return 1;
-      if (partsA[i] < partsB[i]) return -1;
-    }
-    return 0;
-  };
-
   // 获取最大版本号
   const validVersion = versions.reduce((max, v) =>
-    compareVersions(v, max) > 0 ? v : max
+    compareVersions(v, max) > 0 ? v : max,
   );
 
   // 写入 .node-version 文件
-  const nodeVersionPath = path.join(projectPath, '.node-version');
-  fs.writeFileSync(nodeVersionPath, validVersion, 'utf8');
+  const nodeVersionPath = path.join(projectPath, ".node-version");
+  fs.writeFileSync(nodeVersionPath, validVersion, "utf8");
   console.log(`✓ Node version synced: ${validVersion}`);
 };
