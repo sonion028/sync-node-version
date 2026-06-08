@@ -34,6 +34,25 @@ jobs:
           fi
           echo "Tag 在 main 分支上 ✅"
 
+      # 检查并安装 jq（如果不存在）
+      - name: Check and install jq
+        shell: bash
+        run: |
+          if ! command -v jq &> /dev/null; then
+            echo "jq 未找到，开始安装..."
+            apt-get update && apt-get install -y jq
+            echo "jq 安装完成"
+          else
+            echo "jq 已存在，版本: $(jq --version)"
+          fi
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          # node-version-file: ">=22.0.0"
+          # node-version: 24.13.0 # 建议用 LTS 版本，稳定性更好
+          registry-url: "https://registry.npmjs.org/"
+
       # tag 同步 package.json 版本 依赖jq
       - name: 同步 Tag 为 package.json 版本
         run: |
